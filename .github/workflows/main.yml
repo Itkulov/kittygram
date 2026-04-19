@@ -107,6 +107,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/kittygram
+            docker compose -f docker-compose.production.yml down --remove-orphans || true
             if [ ! -f .env ]; then
               echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
               echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
@@ -121,7 +122,6 @@ jobs:
             docker compose -f docker-compose.production.yml up -d --remove-orphans
             docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
             docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
-            # Копирование статики фронтенда в volume
             mkdir -p /tmp/static_tmp
             docker cp $(docker compose -f docker-compose.production.yml ps -q frontend):/app/build/. /tmp/static_tmp/
             docker cp /tmp/static_tmp/. $(docker compose -f docker-compose.production.yml ps -q gateway):/static/

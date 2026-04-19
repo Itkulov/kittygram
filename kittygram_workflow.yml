@@ -21,9 +21,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
       - name: Install backend dependencies
@@ -48,7 +48,7 @@ jobs:
           cd backend/
           python manage.py test
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '16'
       - name: Run frontend tests
@@ -61,26 +61,26 @@ jobs:
     needs: tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push backend
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
           tags: itkulov/kittygram_backend:latest
       - name: Build and push frontend
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
           tags: itkulov/kittygram_frontend:latest
       - name: Build and push gateway
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: ./nginx
           push: true
@@ -90,7 +90,7 @@ jobs:
     needs: build_and_push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Copy docker-compose.production.yml to server
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -107,6 +107,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/kittygram
+            docker compose -f docker-compose.production.yml down --remove-orphans || true
             if [ ! -f .env ]; then
               echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
               echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
@@ -117,10 +118,15 @@ jobs:
               echo "DEBUG=False" >> .env
               echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
             fi
-            docker-compose -f docker-compose.production.yml pull
-            docker-compose -f docker-compose.production.yml up -d --remove-orphans
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d --remove-orphans
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
+            mkdir -p /tmp/static_tmp
+            docker cp $(docker compose -f docker-compose.production.yml ps -q frontend):/app/build/. /tmp/static_tmp/
+            docker cp /tmp/static_tmp/. $(docker compose -f docker-compose.production.yml ps -q gateway):/static/
+            rm -rf /tmp/static_tmp
+            docker compose -f docker-compose.production.yml exec -T gateway nginx -s reload
 
   send_telegram_notification:
     needs: deploy
@@ -132,4 +138,4 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message: "✅ Деплой Kittygram успешно завершён! Проект доступен по адресу: http://${{ secrets.SERVER_HOST }}:9000"
+          message: "✅ Деплой Kittygram успешно завершён! Проект доступен по адресу: http://${{ secrets.SERVER_HOST }}"
