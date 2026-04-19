@@ -1,0 +1,46 @@
+version: '3.8'
+
+volumes:
+  static:
+  media:
+  pg_data:
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: always
+
+  backend:
+    image: Itkulov/kittygram_backend:latest
+    container_name: backend
+    env_file: .env
+    volumes:
+      - static:/static
+      - media:/media
+    depends_on:
+      - postgres
+    restart: always
+
+  frontend:
+    image: Itkulov/kittygram_frontend:latest
+    container_name: frontend
+    volumes:
+      - static:/app/build
+    restart: always
+
+  gateway:
+    image: Itkulov/kittygram_gateway:latest
+    container_name: gateway
+    ports:
+      - "9000:80"
+    volumes:
+      - static:/static
+      - media:/media
+    depends_on:
+      - backend
+      - frontend
+    restart: always
