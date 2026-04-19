@@ -119,4 +119,3 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 
 }
-psycopg2-binary==2.9.3
