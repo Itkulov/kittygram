@@ -9,7 +9,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-STATIC_ROOT = "/app/collected_static"
+# Единое правильное значение STATIC_ROOT, соответствующее точке монтирования volume static
+STATIC_ROOT = '/app/static'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -55,8 +56,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'kittygram_backend.wsgi.application'
 
 
-import os
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -99,7 +98,7 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'collected_static') 
+# STATIC_ROOT уже определён выше как '/app/static', дублирование убрано
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -108,7 +107,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated', 
+        'rest_framework.permissions.IsAuthenticated',
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -117,5 +116,4 @@ REST_FRAMEWORK = {
 
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
-
 }
